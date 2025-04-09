@@ -30,5 +30,5 @@ Here's how you might run mitmproxy with multiple addons in reverse proxy mode:
 ```bash
 mitmweb --mode reverse:https://127.0.0.1:4999@192.168.1.117:5000 \
         -s mitm2pcap.py \
-        -s mitmbodyfilter.py \
+        -s filters/mitmbodyfilter.py \
         -s filters/httpfilterexample.py
