@@ -61,10 +61,9 @@ python genproxy.py --restore
 # To just view the last generated mitmweb command:
 python genproxy.py --last
 ```
+
 Once --build completes, you’ll find:
-
-    A backup-mitm/ directory with originals
-
-    A last_mitm_command.sh script with the full mitmweb … command
+- A **backup-mitm/** directory with originals
+- A **last_mitm_command.sh** script with the full mitmweb command
 
 Run that script directly anytime to bring your environment back up.
