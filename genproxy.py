@@ -86,40 +86,64 @@ def ensure_filter_file(addons_dir: Path, protocol: str) -> Path:
     return filepath
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Patch functions for docker-compose
+# Patch functions for docker-compose - MODIFICATO
 # ──────────────────────────────────────────────────────────────────────────────
 
-def patch_compose(compose_path: Path, used_ports: set[int]) -> Tuple[str, int, int]:
+def get_services_with_ports(compose_path: Path) -> List[str]:
+    """Restituisce la lista dei servizi che hanno porte esposte"""
+    try:
+        data: Dict = yaml.safe_load(compose_path.read_text(encoding="utf8"))
+    except Exception as e:
+        print(f"✖  Error reading {compose_path}: {e}")
+        return []
+
+    if not data or "services" not in data:
+        print(f"⚠️  No services in {compose_path.relative_to(BASE_DIR)}")
+        return []
+
+    services_with_ports = []
+    for svc_name, svc_def in data["services"].items():
+        if "ports" in svc_def and svc_def["ports"]:
+            services_with_ports.append(svc_name)
+    
+    return services_with_ports
+
+def patch_compose_service(compose_path: Path, service_name: str, used_ports: set[int]) -> Tuple[str, int, int]:
+    """Modifica le porte di un singolo servizio nel docker-compose"""
     try:
         data: Dict = yaml.safe_load(compose_path.read_text(encoding="utf8"))
     except Exception as e:
         print(f"✖  Error reading {compose_path}: {e}")
         return "", 0, 0
 
-    if not data or "services" not in data:
-        print(f"⚠️  No services in {compose_path.relative_to(BASE_DIR)}")
+    if not data or "services" not in data or service_name not in data["services"]:
+        print(f"⚠️  Service {service_name} not found in {compose_path.relative_to(BASE_DIR)}")
         return "", 0, 0
 
-    svc_name, svc_def = next(iter(data["services"].items()))
+    svc_def = data["services"][service_name]
     if "ports" not in svc_def or not svc_def["ports"]:
-        print(f"⚠️  No ports exposed in {compose_path.relative_to(BASE_DIR)}")
+        print(f"⚠️  No ports exposed for service {service_name} in {compose_path.relative_to(BASE_DIR)}")
         return "", 0, 0
 
+    # Prendi il primo mapping delle porte
     first_mapping = str(svc_def["ports"][0])
     parts = first_mapping.split(":")
+    
     if len(parts) == 2:
         host_port, container_port = parts
     elif len(parts) == 3:
         _host_ip, host_port, container_port = parts
     else:
-        print(f"⚠️  Unrecognised mapping '{first_mapping}' in {compose_path}")
+        print(f"⚠️  Unrecognised mapping '{first_mapping}' for service {service_name}")
         return "", 0, 0
 
+    # Genera una nuova porta
     new_port = random_free_port(used_ports)
     svc_def["ports"][0] = f"127.0.0.1:{new_port}:{container_port}"
 
+    # Salva il file modificato
     compose_path.write_text(yaml.dump(data, sort_keys=False), encoding="utf8")
-    return svc_name, new_port, int(host_port)
+    return service_name, new_port, int(host_port)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Helper for saving/loading last command
@@ -136,7 +160,7 @@ def load_last_command() -> str | None:
     return "\n".join(l for l in lines if not l.startswith("#!")).strip()
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Workflow BUILD
+# Workflow BUILD - MODIFICATO
 # ──────────────────────────────────────────────────────────────────────────────
 
 def do_build() -> None:
@@ -161,20 +185,42 @@ def do_build() -> None:
     # 2. Services selection -----------------------------------------------------
     services: List[Dict] = []
     print("\nNow indicate which folders are docker-compose services:")
+    
     for folder in visible_directories():
         ans = input(f"  Is '{folder.name}' a service? (y/N): ").strip().lower()
         if ans != "y":
             continue
 
-        proto = ""
-        while proto not in {"tcp", "http", "https"}:
-            proto = input("    Protocol (tcp/http/https): ").strip().lower()
+        compose_path = folder / "docker-compose.yml"
+        if not compose_path.exists():
+            print(f"⚠️  {compose_path.relative_to(BASE_DIR)} not found; skipping.")
+            continue
 
-        cert_path: str | None = None
-        if proto == "https":
-            cert_path = input("    Path to fullchain.pem (Enter to omit): ").strip() or None
+        # Trova tutti i servizi con porte esposte
+        services_with_ports = get_services_with_ports(compose_path)
+        
+        if not services_with_ports:
+            print(f"⚠️  No services with exposed ports found in {folder.name}")
+            continue
+        
+        print(f"  Services with ports in {folder.name}: {', '.join(services_with_ports)}")
+        
+        # Per ogni servizio con porte, chiedi il protocollo
+        for service_name in services_with_ports:
+            proto = ""
+            while proto not in {"tcp", "http", "https"}:
+                proto = input(f"    Protocol for {service_name} (tcp/http/https): ").strip().lower()
 
-        services.append({"folder": folder, "protocol": proto, "cert": cert_path})
+            cert_path: str | None = None
+            if proto == "https":
+                cert_path = input(f"    Path to fullchain.pem for {service_name} (Enter to omit): ").strip() or None
+
+            services.append({
+                "folder": folder, 
+                "service_name": service_name,
+                "protocol": proto, 
+                "cert": cert_path
+            })
 
     if not services:
         print("❌  No services chosen. Operation cancelled.")
@@ -197,11 +243,11 @@ def do_build() -> None:
 
     for svc in services:
         compose_path = svc["folder"] / "docker-compose.yml"
-        if not compose_path.exists():
-            print(f"⚠️  {compose_path.relative_to(BASE_DIR)} not found; skipping.")
-            continue
-
-        svc_name, new_local_port, original_port = patch_compose(compose_path, used_ports)
+        
+        svc_name, new_local_port, original_port = patch_compose_service(
+            compose_path, svc["service_name"], used_ports
+        )
+        
         if new_local_port == 0:
             continue  # no ports / error
 
