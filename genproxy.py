@@ -86,11 +86,11 @@ def ensure_filter_file(addons_dir: Path, protocol: str) -> Path:
     return filepath
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Patch functions for docker-compose - MODIFICATO
+# Patch functions for docker-compose
 # ──────────────────────────────────────────────────────────────────────────────
 
 def get_services_with_ports(compose_path: Path) -> List[str]:
-    """Restituisce la lista dei servizi che hanno porte esposte"""
+    """Returns the list of services that have exposed ports"""
     try:
         data: Dict = yaml.safe_load(compose_path.read_text(encoding="utf8"))
     except Exception as e:
@@ -109,7 +109,7 @@ def get_services_with_ports(compose_path: Path) -> List[str]:
     return services_with_ports
 
 def patch_compose_service(compose_path: Path, service_name: str, used_ports: set[int]) -> Tuple[str, int, int]:
-    """Modifica le porte di un singolo servizio nel docker-compose"""
+    """Change ports of a single service in docker-compose"""
     try:
         data: Dict = yaml.safe_load(compose_path.read_text(encoding="utf8"))
     except Exception as e:
@@ -125,7 +125,7 @@ def patch_compose_service(compose_path: Path, service_name: str, used_ports: set
         print(f"⚠️  No ports exposed for service {service_name} in {compose_path.relative_to(BASE_DIR)}")
         return "", 0, 0
 
-    # Prendi il primo mapping delle porte
+    # Get the first port mapping
     first_mapping = str(svc_def["ports"][0])
     parts = first_mapping.split(":")
     
@@ -137,11 +137,11 @@ def patch_compose_service(compose_path: Path, service_name: str, used_ports: set
         print(f"⚠️  Unrecognised mapping '{first_mapping}' for service {service_name}")
         return "", 0, 0
 
-    # Genera una nuova porta
+    # Generate a new port
     new_port = random_free_port(used_ports)
     svc_def["ports"][0] = f"127.0.0.1:{new_port}:{container_port}"
 
-    # Salva il file modificato
+    # Save the modified file
     compose_path.write_text(yaml.dump(data, sort_keys=False), encoding="utf8")
     return service_name, new_port, int(host_port)
 
@@ -160,7 +160,7 @@ def load_last_command() -> str | None:
     return "\n".join(l for l in lines if not l.startswith("#!")).strip()
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Workflow BUILD - MODIFICATO
+# Workflow BUILD
 # ──────────────────────────────────────────────────────────────────────────────
 
 def do_build() -> None:
@@ -196,7 +196,7 @@ def do_build() -> None:
             print(f"⚠️  {compose_path.relative_to(BASE_DIR)} not found; skipping.")
             continue
 
-        # Trova tutti i servizi con porte esposte
+        # Find all services with exposed doors
         services_with_ports = get_services_with_ports(compose_path)
         
         if not services_with_ports:
@@ -205,7 +205,7 @@ def do_build() -> None:
         
         print(f"  Services with ports in {folder.name}: {', '.join(services_with_ports)}")
         
-        # Per ogni servizio con porte, chiedi il protocollo
+        # For each service with ports, ask for the protocol
         for service_name in services_with_ports:
             proto = ""
             while proto not in {"tcp", "http", "https"}:
@@ -270,7 +270,7 @@ def do_build() -> None:
         stub_path = ensure_filter_file(ADDONS_DIR, svc["protocol"])
         if stub_path.name not in existing:
             print(f"    ✔  Created {stub_path.relative_to(BASE_DIR)}")
-            existing.add(stub_path.name)  # evita duplicati
+            existing.add(stub_path.name)  # avoid duplicates
 
     for f in ADDONS_DIR.glob("*.py"):
         addon_flags.extend(["-s", str(f)])
