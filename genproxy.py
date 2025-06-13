@@ -105,7 +105,7 @@ def get_services_with_ports(compose_path: Path) -> List[str]:
     for svc_name, svc_def in data["services"].items():
         if "ports" in svc_def and svc_def["ports"]:
             services_with_ports.append(svc_name)
-    
+
     return services_with_ports
 
 def patch_compose_service(compose_path: Path, service_name: str, used_ports: set[int]) -> Tuple[str, int, int]:
@@ -128,7 +128,7 @@ def patch_compose_service(compose_path: Path, service_name: str, used_ports: set
     # Get the first port mapping
     first_mapping = str(svc_def["ports"][0])
     parts = first_mapping.split(":")
-    
+
     if len(parts) == 2:
         host_port, container_port = parts
     elif len(parts) == 3:
@@ -150,7 +150,7 @@ def patch_compose_service(compose_path: Path, service_name: str, used_ports: set
 # ──────────────────────────────────────────────────────────────────────────────
 
 def save_last_command(cmd: str) -> None:
-    LAST_CMD_FILE.write_text("#!/bin/bash\n" + cmd + "\n", encoding="utf8")
+    LAST_CMD_FILE.write_text("#!/bin/sh\n" + cmd + "\n", encoding="utf8")
     LAST_CMD_FILE.chmod(LAST_CMD_FILE.stat().st_mode | 0o111)
 
 def load_last_command() -> str | None:
@@ -163,7 +163,7 @@ def load_last_command() -> str | None:
 # Workflow BUILD
 # ──────────────────────────────────────────────────────────────────────────────
 
-def do_build() -> None:
+def do_build(args) -> None:
     global ADDONS_DIR
 
     if BACKUP_DIR.exists():
@@ -175,17 +175,18 @@ def do_build() -> None:
 
     # 1. Backup ----------------------------------------------------------------
     BACKUP_DIR.mkdir()
-    print("Select folders to save in backup (y to include):")
-    for folder in visible_directories():
-        ans = input(f"  Backup '{folder.name}'? (y/N): ").strip().lower()
-        if ans == "y":
-            shutil.copytree(folder, BACKUP_DIR / folder.name, dirs_exist_ok=True)
-            print(f"    ✔ Copied to backup/{folder.name}")
+    if not args.skip_backups:
+        print("Select folders to save in backup (y to include):")
+        for folder in visible_directories():
+            ans = input(f"  Backup '{folder.name}'? (y/N): ").strip().lower()
+            if ans == "y":
+                shutil.copytree(folder, BACKUP_DIR / folder.name, dirs_exist_ok=True)
+                print(f"    ✔ Copied to backup/{folder.name}")
 
     # 2. Services selection -----------------------------------------------------
     services: List[Dict] = []
     print("\nNow indicate which folders are docker-compose services:")
-    
+
     for folder in visible_directories():
         ans = input(f"  Is '{folder.name}' a service? (y/N): ").strip().lower()
         if ans != "y":
@@ -198,13 +199,13 @@ def do_build() -> None:
 
         # Find all services with exposed doors
         services_with_ports = get_services_with_ports(compose_path)
-        
+
         if not services_with_ports:
             print(f"⚠️  No services with exposed ports found in {folder.name}")
             continue
-        
+
         print(f"  Services with ports in {folder.name}: {', '.join(services_with_ports)}")
-        
+
         # For each service with ports, ask for the protocol
         for service_name in services_with_ports:
             proto = ""
@@ -216,9 +217,9 @@ def do_build() -> None:
                 cert_path = input(f"    Path to fullchain.pem for {service_name} (Enter to omit): ").strip() or None
 
             services.append({
-                "folder": folder, 
+                "folder": folder,
                 "service_name": service_name,
-                "protocol": proto, 
+                "protocol": proto,
                 "cert": cert_path
             })
 
@@ -228,12 +229,22 @@ def do_build() -> None:
         return
 
     # 3. Global parameters ------------------------------------------------------
-    addons_dir_input = input("\nPath to mitmproxy addon folder: ").strip() or "."
+    if args.addons_dir is None:
+        addons_dir_input = input("\nPath to mitmproxy addon folder: ").strip() or "."
+    else:
+        addons_dir_input = args.addons_dir
     ADDONS_DIR = Path(addons_dir_input).expanduser().resolve()
     ADDONS_DIR.mkdir(exist_ok=True, parents=True)
 
-    target_ip = input("IP address on which to expose services: ").strip()
-    web_port = input("Mitmproxy Web-UI port (e.g. 8085): ").strip() or "8081"
+    if args.target_ip is None:
+        target_ip = input("IP address on which to expose services: ").strip()
+    else:
+        target_ip = args.target_ip
+
+    if args.web_port is None:
+        web_port = input("Mitmproxy Web-UI port (e.g. 8085): ").strip() or "8081"
+    else:
+        web_port = args.web_port
 
     # 4. Patch compose + reverse-mode ------------------------------------------
     used_ports: set[int] = set()
@@ -243,11 +254,11 @@ def do_build() -> None:
 
     for svc in services:
         compose_path = svc["folder"] / "docker-compose.yml"
-        
+
         svc_name, new_local_port, original_port = patch_compose_service(
             compose_path, svc["service_name"], used_ports
         )
-        
+
         if new_local_port == 0:
             continue  # no ports / error
 
@@ -269,7 +280,10 @@ def do_build() -> None:
     for svc in services:
         stub_path = ensure_filter_file(ADDONS_DIR, svc["protocol"])
         if stub_path.name not in existing:
-            print(f"    ✔  Created {stub_path.relative_to(BASE_DIR)}")
+            if stub_path.is_relative_to(BASE_DIR):
+                print(f"    ✔  Created {stub_path.relative_to(BASE_DIR)}")
+            else:
+                print(f"    ✔  Created {stub_path.absolute()}")
             existing.add(stub_path.name)  # avoid duplicates
 
     for f in ADDONS_DIR.glob("*.py"):
@@ -280,7 +294,7 @@ def do_build() -> None:
         "mitmweb",
         *reverse_flags,
         "--web-host", target_ip,
-        "--web-port", web_port,
+        "--web-port", str(web_port),
     ]
     if ssl_insecure:
         cmd_parts.append("--ssl-insecure")
@@ -405,6 +419,12 @@ def parse_args(argv: List[str]):
     g.add_argument("-b", "--build",   action="store_true", help="build mitm environment")
     g.add_argument("-r", "--restore", action="store_true", help="restore from snapshot")
     g.add_argument("-l", "--last",    action="store_true", help="show last command")
+
+    parser.add_argument("--skip-backups",   action="store_true", help="skip the backup prompt of the services")
+    parser.add_argument("--addons-dir",     action="store", type=str, help="path to mitmproxy addons directory")
+    parser.add_argument("--target-ip",      action="store", type=str, help="IP address on which to expose services")
+    parser.add_argument("--web-port",       action="store", type=int, help="mitmweb http port")
+
     return parser.parse_args(argv)
 
 # ──────────────────────────────────────────────────────────────────────────────
@@ -415,7 +435,7 @@ def main() -> None:
     args = parse_args(sys.argv[1:])
 
     if args.build:
-        do_build()
+        do_build(args)
     elif args.restore:
         do_restore()
     elif args.last:

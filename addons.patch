@@ -1,0 +1,431 @@
+diff --git a/.gitignore b/.gitignore
+index 3f9fb92..d2a8a0e 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -1,2 +1,2 @@
+ filters/bak/
+-filters/__pycache__/
+\ No newline at end of file
++**/__pycache__/
+diff --git a/__pycache__/mitmhttppcap.cpython-312.pyc b/__pycache__/mitmhttppcap.cpython-312.pyc
+deleted file mode 100644
+index c9541a120ef3a9f9e3e94087b387e0a4284f9498..0000000000000000000000000000000000000000
+GIT binary patch
+literal 0
+HcmV?d00001
+
+literal 21566
+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
+
+diff --git a/addons.patch b/addons.patch
+new file mode 100644
+index 0000000..e69de29
+diff --git a/genproxy.py b/genproxy.py
+index b55c742..49381a7 100755
+--- a/genproxy.py
++++ b/genproxy.py
+@@ -105,7 +105,7 @@ def get_services_with_ports(compose_path: Path) -> List[str]:
+     for svc_name, svc_def in data["services"].items():
+         if "ports" in svc_def and svc_def["ports"]:
+             services_with_ports.append(svc_name)
+-    
++
+     return services_with_ports
+ 
+ def patch_compose_service(compose_path: Path, service_name: str, used_ports: set[int]) -> Tuple[str, int, int]:
+@@ -128,7 +128,7 @@ def patch_compose_service(compose_path: Path, service_name: str, used_ports: set
+     # Get the first port mapping
+     first_mapping = str(svc_def["ports"][0])
+     parts = first_mapping.split(":")
+-    
++
+     if len(parts) == 2:
+         host_port, container_port = parts
+     elif len(parts) == 3:
+@@ -150,7 +150,7 @@ def patch_compose_service(compose_path: Path, service_name: str, used_ports: set
+ # ──────────────────────────────────────────────────────────────────────────────
+ 
+ def save_last_command(cmd: str) -> None:
+-    LAST_CMD_FILE.write_text("#!/bin/bash\n" + cmd + "\n", encoding="utf8")
++    LAST_CMD_FILE.write_text("#!/bin/sh\n" + cmd + "\n", encoding="utf8")
+     LAST_CMD_FILE.chmod(LAST_CMD_FILE.stat().st_mode | 0o111)
+ 
+ def load_last_command() -> str | None:
+@@ -163,7 +163,7 @@ def load_last_command() -> str | None:
+ # Workflow BUILD
+ # ──────────────────────────────────────────────────────────────────────────────
+ 
+-def do_build() -> None:
++def do_build(args) -> None:
+     global ADDONS_DIR
+ 
+     if BACKUP_DIR.exists():
+@@ -175,17 +175,18 @@ def do_build() -> None:
+ 
+     # 1. Backup ----------------------------------------------------------------
+     BACKUP_DIR.mkdir()
+-    print("Select folders to save in backup (y to include):")
+-    for folder in visible_directories():
+-        ans = input(f"  Backup '{folder.name}'? (y/N): ").strip().lower()
+-        if ans == "y":
+-            shutil.copytree(folder, BACKUP_DIR / folder.name, dirs_exist_ok=True)
+-            print(f"    ✔ Copied to backup/{folder.name}")
++    if not args.skip_backups:
++        print("Select folders to save in backup (y to include):")
++        for folder in visible_directories():
++            ans = input(f"  Backup '{folder.name}'? (y/N): ").strip().lower()
++            if ans == "y":
++                shutil.copytree(folder, BACKUP_DIR / folder.name, dirs_exist_ok=True)
++                print(f"    ✔ Copied to backup/{folder.name}")
+ 
+     # 2. Services selection -----------------------------------------------------
+     services: List[Dict] = []
+     print("\nNow indicate which folders are docker-compose services:")
+-    
++
+     for folder in visible_directories():
+         ans = input(f"  Is '{folder.name}' a service? (y/N): ").strip().lower()
+         if ans != "y":
+@@ -198,13 +199,13 @@ def do_build() -> None:
+ 
+         # Find all services with exposed doors
+         services_with_ports = get_services_with_ports(compose_path)
+-        
++
+         if not services_with_ports:
+             print(f"⚠️  No services with exposed ports found in {folder.name}")
+             continue
+-        
++
+         print(f"  Services with ports in {folder.name}: {', '.join(services_with_ports)}")
+-        
++
+         # For each service with ports, ask for the protocol
+         for service_name in services_with_ports:
+             proto = ""
+@@ -216,9 +217,9 @@ def do_build() -> None:
+                 cert_path = input(f"    Path to fullchain.pem for {service_name} (Enter to omit): ").strip() or None
+ 
+             services.append({
+-                "folder": folder, 
++                "folder": folder,
+                 "service_name": service_name,
+-                "protocol": proto, 
++                "protocol": proto,
+                 "cert": cert_path
+             })
+ 
+@@ -228,12 +229,22 @@ def do_build() -> None:
+         return
+ 
+     # 3. Global parameters ------------------------------------------------------
+-    addons_dir_input = input("\nPath to mitmproxy addon folder: ").strip() or "."
++    if args.addons_dir is None:
++        addons_dir_input = input("\nPath to mitmproxy addon folder: ").strip() or "."
++    else:
++        addons_dir_input = args.addons_dir
+     ADDONS_DIR = Path(addons_dir_input).expanduser().resolve()
+     ADDONS_DIR.mkdir(exist_ok=True, parents=True)
+ 
+-    target_ip = input("IP address on which to expose services: ").strip()
+-    web_port = input("Mitmproxy Web-UI port (e.g. 8085): ").strip() or "8081"
++    if args.target_ip is None:
++        target_ip = input("IP address on which to expose services: ").strip()
++    else:
++        target_ip = args.target_ip
++
++    if args.web_port is None:
++        web_port = input("Mitmproxy Web-UI port (e.g. 8085): ").strip() or "8081"
++    else:
++        web_port = args.web_port
+ 
+     # 4. Patch compose + reverse-mode ------------------------------------------
+     used_ports: set[int] = set()
+@@ -243,11 +254,11 @@ def do_build() -> None:
+ 
+     for svc in services:
+         compose_path = svc["folder"] / "docker-compose.yml"
+-        
++
+         svc_name, new_local_port, original_port = patch_compose_service(
+             compose_path, svc["service_name"], used_ports
+         )
+-        
++
+         if new_local_port == 0:
+             continue  # no ports / error
+ 
+@@ -269,7 +280,10 @@ def do_build() -> None:
+     for svc in services:
+         stub_path = ensure_filter_file(ADDONS_DIR, svc["protocol"])
+         if stub_path.name not in existing:
+-            print(f"    ✔  Created {stub_path.relative_to(BASE_DIR)}")
++            if stub_path.is_relative_to(BASE_DIR):
++                print(f"    ✔  Created {stub_path.relative_to(BASE_DIR)}")
++            else:
++                print(f"    ✔  Created {stub_path.absolute()}")
+             existing.add(stub_path.name)  # avoid duplicates
+ 
+     for f in ADDONS_DIR.glob("*.py"):
+@@ -280,7 +294,7 @@ def do_build() -> None:
+         "mitmweb",
+         *reverse_flags,
+         "--web-host", target_ip,
+-        "--web-port", web_port,
++        "--web-port", str(web_port),
+     ]
+     if ssl_insecure:
+         cmd_parts.append("--ssl-insecure")
+@@ -405,6 +419,12 @@ def parse_args(argv: List[str]):
+     g.add_argument("-b", "--build",   action="store_true", help="build mitm environment")
+     g.add_argument("-r", "--restore", action="store_true", help="restore from snapshot")
+     g.add_argument("-l", "--last",    action="store_true", help="show last command")
++
++    parser.add_argument("--skip-backups",   action="store_true", help="skip the backup prompt of the services")
++    parser.add_argument("--addons-dir",     action="store", type=str, help="path to mitmproxy addons directory")
++    parser.add_argument("--target-ip",      action="store", type=str, help="IP address on which to expose services")
++    parser.add_argument("--web-port",       action="store", type=int, help="mitmweb http port")
++
+     return parser.parse_args(argv)
+ 
+ # ──────────────────────────────────────────────────────────────────────────────
+@@ -415,7 +435,7 @@ def main() -> None:
+     args = parse_args(sys.argv[1:])
+ 
+     if args.build:
+-        do_build()
++        do_build(args)
+     elif args.restore:
+         do_restore()
+     elif args.last:
+@@ -424,4 +444,4 @@ def main() -> None:
+         print("Use -h for help.")
+ 
+ if __name__ == "__main__":
+-    main()
+\ No newline at end of file
++    main()
