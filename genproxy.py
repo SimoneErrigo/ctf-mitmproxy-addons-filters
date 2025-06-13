@@ -192,9 +192,14 @@ def do_build(args) -> None:
         if ans != "y":
             continue
 
-        compose_path = folder / "docker-compose.yml"
-        if not compose_path.exists():
-            print(f"⚠️  {compose_path.relative_to(BASE_DIR)} not found; skipping.")
+        compose_path = None
+        for possible_name in ["docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"]:
+            if (folder / possible_name).exists(): 
+                compose_path = folder / possible_name
+                break
+
+        if compose_path is None:
+            print(f"⚠️  No docker-compose file found; skipping.")
             continue
 
         # Find all services with exposed doors
@@ -445,3 +450,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
