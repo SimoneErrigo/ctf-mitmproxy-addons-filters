@@ -247,7 +247,7 @@ def do_build(args) -> None:
         target_ip = args.target_ip
 
     if args.web_port is None:
-        web_port = input("Mitmproxy Web-UI port (e.g. 8085): ").strip() or "8081"
+        web_port = input("Mitmproxy Web-UI port (e.g. 8085): ").strip() or "8085"
     else:
         web_port = args.web_port
 
