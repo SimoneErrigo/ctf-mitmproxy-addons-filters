@@ -258,7 +258,6 @@ def do_build(args) -> None:
     cert_flag: str | None = None
 
     for svc in services:
-        compose_path = svc["folder"] / "docker-compose.yml"
 
         svc_name, new_local_port, original_port = patch_compose_service(
             compose_path, svc["service_name"], used_ports
