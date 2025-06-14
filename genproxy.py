@@ -13,7 +13,7 @@ except ModuleNotFoundError:
     sys.exit(1)
 
 # ──────────────────────────────────────────────────────────────────────────────
-# Globabl constants
+# Global constants
 # ──────────────────────────────────────────────────────────────────────────────
 BASE_DIR: Path = Path.cwd()
 BACKUP_DIR: Path = BASE_DIR / "backup-mitm"
@@ -88,6 +88,14 @@ def ensure_filter_file(addons_dir: Path, protocol: str) -> Path:
 # ──────────────────────────────────────────────────────────────────────────────
 # Patch functions for docker-compose
 # ──────────────────────────────────────────────────────────────────────────────
+
+def find_compose_file(folder: Path) -> Path | None:
+    """Find docker-compose file in folder, checking all common names"""
+    for possible_name in ["docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"]:
+        compose_path = folder / possible_name
+        if compose_path.exists():
+            return compose_path
+    return None
 
 def get_services_with_ports(compose_path: Path) -> List[str]:
     """Returns the list of services that have exposed ports"""
@@ -175,6 +183,10 @@ def do_build(args) -> None:
 
     # 1. Backup ----------------------------------------------------------------
     BACKUP_DIR.mkdir()
+    
+    # Track which folders contain docker-compose files for automatic backup
+    compose_folders = set()
+    
     if not args.skip_backups:
         print("Select folders to save in backup (y to include):")
         for folder in visible_directories():
@@ -192,17 +204,17 @@ def do_build(args) -> None:
         if ans != "y":
             continue
 
-        compose_path = None
-        for possible_name in ["docker-compose.yml", "docker-compose.yaml", "compose.yml", "compose.yaml"]:
-            if (folder / possible_name).exists(): 
-                compose_path = folder / possible_name
-                break
-
+        # Use the new function to find compose file
+        compose_path = find_compose_file(folder)
+        
         if compose_path is None:
             print(f"⚠️  No docker-compose file found; skipping.")
             continue
+        
+        # Always backup folders with docker-compose files
+        compose_folders.add(folder)
 
-        # Find all services with exposed doors
+        # Find all services with exposed ports
         services_with_ports = get_services_with_ports(compose_path)
 
         if not services_with_ports:
@@ -211,27 +223,41 @@ def do_build(args) -> None:
 
         print(f"  Services with ports in {folder.name}: {', '.join(services_with_ports)}")
 
-        # For each service with ports, ask for the protocol
+        # Ask for HTTPS certificate once per compose file if there are HTTPS services
+        cert_path_for_compose: str | None = None
+        has_https = False
+        
+        # First, check if any service will be HTTPS
         for service_name in services_with_ports:
             proto = ""
             while proto not in {"tcp", "http", "https"}:
                 proto = input(f"    Protocol for {service_name} (tcp/http/https): ").strip().lower()
-
-            cert_path: str | None = None
+            
             if proto == "https":
-                cert_path = input(f"    Path to fullchain.pem for {service_name} (Enter to omit): ").strip() or None
+                has_https = True
+                # Ask for certificate only once per compose file
+                if cert_path_for_compose is None:
+                    cert_path_for_compose = input(f"    Path to fullchain.pem for HTTPS services in {folder.name} (Enter to omit): ").strip() or None
 
             services.append({
                 "folder": folder,
+                "compose_path": compose_path,  # Store compose path for later
                 "service_name": service_name,
                 "protocol": proto,
-                "cert": cert_path
+                "cert": cert_path_for_compose if proto == "https" else None
             })
 
     if not services:
         print("❌  No services chosen. Operation cancelled.")
         BACKUP_DIR.rmdir()
         return
+    
+    # Always backup docker-compose folders (even with --skip-backups to ensure the restore works)
+    print("\nBacking up docker-compose files...")
+    for folder in compose_folders:
+        if not (BACKUP_DIR / folder.name).exists():
+            shutil.copytree(folder, BACKUP_DIR / folder.name, dirs_exist_ok=True)
+            print(f"  ✔ Auto-backed up docker-compose folder: {folder.name}")
 
     # 3. Global parameters ------------------------------------------------------
     if args.addons_dir is None:
@@ -255,12 +281,11 @@ def do_build(args) -> None:
     used_ports: set[int] = set()
     reverse_flags: List[str] = []
     ssl_insecure = False
-    cert_flag: str | None = None
+    cert_flags: set[str] = set()  # Use set to avoid duplicates
 
     for svc in services:
-
         svc_name, new_local_port, original_port = patch_compose_service(
-            compose_path, svc["service_name"], used_ports
+            svc["compose_path"], svc["service_name"], used_ports
         )
 
         if new_local_port == 0:
@@ -274,8 +299,8 @@ def do_build(args) -> None:
 
         if svc["protocol"] == "https":
             ssl_insecure = True
-            if svc["cert"] and cert_flag is None:
-                cert_flag = svc["cert"]
+            if svc["cert"]:
+                cert_flags.add(svc["cert"])
 
     # 5. Addon + autogen -----------------------------------------------------
     addon_flags: list[str] = []
@@ -300,12 +325,18 @@ def do_build(args) -> None:
         "--web-host", target_ip,
         "--web-port", str(web_port),
     ]
-    if ssl_insecure:
-        cmd_parts.append("--ssl-insecure")
-    if cert_flag:
-        cmd_parts.extend(["--certs", cert_flag])
+    
+    # Add certificate flags
+    for cert_path in cert_flags:
+        cmd_parts.extend(["--certs", cert_path])
+    
+    # Add addon flags
     cmd_parts.extend(addon_flags)
     cmd_parts.extend(["--set", "keep_host_header"])
+    
+    # Add --ssl-insecure at the end if needed
+    if ssl_insecure:
+        cmd_parts.append("--ssl-insecure")
 
     final_cmd = " ".join(cmd_parts)
 
@@ -353,6 +384,7 @@ def do_restore() -> None:
 
     print("Restoring original files…")
 
+    # First, restore from backup
     for item in BACKUP_DIR.iterdir():
         target = BASE_DIR / item.name
         if target.exists():
@@ -364,7 +396,9 @@ def do_restore() -> None:
             shutil.copytree(item, target)
         else:
             shutil.copy2(item, target)
+        print(f"  ✔ Restored {item.name}")
 
+    # Clean up generated filters
     if cmd:
         for f in _extract_generated_filters(cmd):
             f = f.expanduser()
@@ -449,4 +483,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
